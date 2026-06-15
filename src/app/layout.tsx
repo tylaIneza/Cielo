@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import "lenis/dist/lenis.css";
+import { Providers } from "@/components/providers/Providers";
+import { PageTransition } from "@/components/transitions/PageTransition";
+import { LuxuryCursor } from "@/components/effects/LuxuryCursor";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -45,14 +49,7 @@ export const metadata: Metadata = {
     title: "Cielo Fashion Boutique | Crafted in Rwanda, Inspired by Style",
     description:
       "Rwanda's premier luxury fashion boutique. Discover exclusive collections and custom tailoring.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Cielo Fashion Boutique",
-      },
-    ],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Cielo Fashion Boutique" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -75,17 +72,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
       className={`${inter.variable} ${playfair.variable} scroll-smooth`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#0a0a0a] text-[#f5f0e8] antialiased overflow-x-hidden">
-        {children}
+      <body className="min-h-screen bg-[#0a0a0a] text-[#f5f0e8] antialiased overflow-x-hidden grain">
+        {/* Premium gold cursor — hidden on touch devices automatically */}
+        <LuxuryCursor />
+
+        {/* Lenis smooth scroll + GSAP ScrollTrigger sync */}
+        <Providers>
+          {/* Fade/slide route transitions */}
+          <PageTransition>
+            {children}
+          </PageTransition>
+        </Providers>
       </body>
     </html>
   );

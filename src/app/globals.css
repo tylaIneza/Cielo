@@ -81,7 +81,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior is handled by Lenis — native smooth disabled to prevent conflict */
   font-size: 16px;
 }
 
@@ -449,5 +449,158 @@ canvas {
 @media (max-width: 768px) {
   .container-luxury {
     padding: 0 1.25rem;
+  }
+}
+
+/* ============================================================
+   3D SCENE UTILITIES
+   ============================================================ */
+
+/* Ensure WebGL canvas fills its container perfectly */
+.canvas-hero {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ============================================================
+   SMOOTH SCROLL — Lenis overrides
+   ============================================================ */
+
+/* Lenis sets this; make sure our scrollbar still shows */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* ============================================================
+   CINEMATIC SCROLL PROGRESS BAR
+   ============================================================ */
+
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--champagne));
+  transform-origin: left;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+/* ============================================================
+   REVEAL ANIMATIONS
+   ============================================================ */
+
+.reveal-char {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.reveal-char span {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* ============================================================
+   FLOATING BADGE ANIMATIONS
+   ============================================================ */
+
+@keyframes badge-float-a {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes badge-float-b {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(4px); }
+}
+
+.badge-float-a { animation: badge-float-a 4s ease-in-out infinite; }
+.badge-float-b { animation: badge-float-b 3.5s ease-in-out infinite; }
+
+/* ============================================================
+   GLASSMORPHISM — ENHANCED
+   ============================================================ */
+
+.glass-frosted {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   CARD 3D TILT (CSS only fallback)
+   ============================================================ */
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-3d:hover {
+  transform: rotateX(-3deg) rotateY(3deg) translateZ(8px);
+}
+
+/* ============================================================
+   TEXT EFFECTS
+   ============================================================ */
+
+.text-cinematic {
+  font-size: clamp(2.8rem, 8vw, 7rem);
+  line-height: 1.0;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+.text-outline {
+  -webkit-text-stroke: 1px var(--gold);
+  color: transparent;
+}
+
+/* ============================================================
+   NOISE TEXTURE — more visible for depth
+   ============================================================ */
+
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.028;
+  pointer-events: none;
+  z-index: 99997;
+  animation: grain 8s steps(1) infinite;
+}
+
+/* ============================================================
+   DIVIDER VARIANTS
+   ============================================================ */
+
+.divider-gold-wide {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold) 70%, transparent 100%);
+  opacity: 0.2;
+}
+
+/* ============================================================
+   CURSOR — hide default on desktop
+   ============================================================ */
+
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
   }
 }

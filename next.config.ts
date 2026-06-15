@@ -15,9 +15,12 @@ const nextConfig: NextConfig = {
     optimizeCss: true,
   },
   transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
-  webpack: (config) => {
-    config.externals = [...(config.externals || []), { canvas: "canvas" }];
-    return config;
+  // Turbopack (default in Next.js 16) — canvas is excluded via alias since
+  // all Three.js components use dynamic() with ssr:false
+  turbopack: {
+    resolveAlias: {
+      canvas: { browser: "./src/lib/empty.js" },
+    },
   },
 };
 

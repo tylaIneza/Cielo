@@ -1,0 +1,568 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USERS & AUTH
+// ============================================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String?   @unique
+  phone             String?   @unique
+  passwordHash      String?
+  firstName         String
+  lastName          String
+  avatar            String?
+  isVerified        Boolean   @default(false)
+  isActive          Boolean   @default(true)
+  roleId            String
+  role              Role      @relation(fields: [roleId], references: [id])
+  preferredLanguage String    @default("en")
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  verifyToken       String?
+  refreshToken      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  addresses           Address[]
+  orders              Order[]
+  reviews             Review[]
+  wishlist            Wishlist[]
+  tailoringRequests   TailoringRequest[]
+  measurements        Measurement[]
+  notifications       Notification[]
+  referralsMade       Referral[]       @relation("ReferralMaker")
+  referralReceived    Referral?        @relation("ReferralReceiver")
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  label       String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String    @id @default(cuid())
+  action      String
+  resource    String
+  description String?
+
+  roles       RolePermission[]
+
+  @@unique([action, resource])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?    @db.Text
+  image       String?
+  parentId    String?
+  parent      Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryChildren")
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id            String          @id @default(cuid())
+  name          String
+  slug          String          @unique
+  description   String?         @db.Text
+  details       String?         @db.Text
+  price         Decimal         @db.Decimal(10, 2)
+  comparePrice  Decimal?        @db.Decimal(10, 2)
+  sku           String?         @unique
+  categoryId    String
+  category      Category        @relation(fields: [categoryId], references: [id])
+  collection    ProductCollection @default(WOMEN)
+  isFeatured    Boolean         @default(false)
+  isNewArrival  Boolean         @default(false)
+  isBestSeller  Boolean         @default(false)
+  isActive      Boolean         @default(true)
+  totalStock    Int             @default(0)
+  tags          String?         @db.Text
+  metaTitle     String?
+  metaDesc      String?
+  weight        Decimal?        @db.Decimal(8, 3)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  images        ProductImage[]
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  wishlist      Wishlist[]
+
+  @@map("products")
+}
+
+enum ProductCollection {
+  WOMEN
+  MEN
+  KIDS
+  AFRICAN
+  UNISEX
+}
+
+model ProductImage {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  publicId    String?
+  altText     String?
+  sortOrder   Int       @default(0)
+  isPrimary   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size       String?
+  color      String?
+  colorHex   String?
+  sku        String?   @unique
+  price      Decimal?  @db.Decimal(10, 2)
+  stock      Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  orderItems OrderItem[]
+  inventory  Inventory[]
+
+  @@map("product_variants")
+}
+
+model Inventory {
+  id         String         @id @default(cuid())
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
+  quantity   Int            @default(0)
+  reserved   Int            @default(0)
+  location   String?
+  updatedAt  DateTime       @updatedAt
+
+  @@map("inventory")
+}
+
+// ============================================================
+// FABRICS
+// ============================================================
+
+model Fabric {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?  @db.Text
+  type         FabricType
+  colors       String?  @db.Text
+  pricePerMeter Decimal  @db.Decimal(10, 2)
+  image        String?
+  texture      String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tailoringRequests TailoringRequest[]
+
+  @@map("fabrics")
+}
+
+enum FabricType {
+  KITENGE
+  ANKARA
+  COTTON
+  SATIN
+  LACE
+  SILK
+  CHIFFON
+  OTHER
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(PENDING)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  shippingCost    Decimal     @db.Decimal(10, 2) @default(0)
+  discount        Decimal     @db.Decimal(10, 2) @default(0)
+  tax             Decimal     @db.Decimal(10, 2) @default(0)
+  total           Decimal     @db.Decimal(10, 2)
+  currency        String      @default("RWF")
+  couponCode      String?
+  notes           String?     @db.Text
+  shippingAddressId String?
+  shippingAddress Address?    @relation(fields: [shippingAddressId], references: [id])
+  deliveryMethod  String?
+  trackingNumber  String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+  payment         Payment?
+
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id         String          @id @default(cuid())
+  orderId    String
+  order      Order           @relation(fields: [orderId], references: [id])
+  productId  String
+  product    Product         @relation(fields: [productId], references: [id])
+  variantId  String?
+  variant    ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity   Int
+  unitPrice  Decimal         @db.Decimal(10, 2)
+  totalPrice Decimal         @db.Decimal(10, 2)
+  createdAt  DateTime        @default(now())
+
+  @@map("order_items")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String        @unique
+  order           Order         @relation(fields: [orderId], references: [id])
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("RWF")
+  transactionId   String?
+  phoneNumber     String?
+  reference       String?
+  metadata        Json?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  MTN_MOMO
+  AIRTEL_MONEY
+  VISA
+  MASTERCARD
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ============================================================
+// ADDRESSES
+// ============================================================
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  label        String?
+  firstName    String
+  lastName     String
+  phone        String?
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  district     String?
+  province     String?
+  country      String   @default("Rwanda")
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders       Order[]
+
+  @@map("addresses")
+}
+
+// ============================================================
+// REVIEWS
+// ============================================================
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  title     String?
+  body      String?  @db.Text
+  isVerified Boolean @default(false)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId])
+  @@map("reviews")
+}
+
+// ============================================================
+// WISHLIST
+// ============================================================
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("wishlists")
+}
+
+// ============================================================
+// CUSTOM TAILORING
+// ============================================================
+
+model TailoringRequest {
+  id               String              @id @default(cuid())
+  requestNumber    String              @unique
+  userId           String
+  user             User                @relation(fields: [userId], references: [id])
+  garmentType      String
+  description      String?             @db.Text
+  inspirationImages Json?
+  fabricId         String?
+  fabric           Fabric?             @relation(fields: [fabricId], references: [id])
+  selectedColor    String?
+  notes            String?             @db.Text
+  deliveryDate     DateTime?
+  status           TailoringStatus     @default(REQUEST_RECEIVED)
+  assignedTailors  String?
+  quotedPrice      Decimal?            @db.Decimal(10, 2)
+  finalPrice       Decimal?            @db.Decimal(10, 2)
+  isQuoteApproved  Boolean?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  measurements     Measurement[]
+  quotations       Quotation[]
+  productionSteps  ProductionTracking[]
+
+  @@map("tailoring_requests")
+}
+
+enum TailoringStatus {
+  REQUEST_RECEIVED
+  MEASUREMENT_REVIEW
+  QUOTATION_SENT
+  CUSTOMER_APPROVED
+  FABRIC_PREPARATION
+  CUTTING
+  SEWING
+  QUALITY_CONTROL
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+}
+
+model Measurement {
+  id                 String            @id @default(cuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id])
+  tailoringRequestId String?
+  tailoringRequest   TailoringRequest? @relation(fields: [tailoringRequestId], references: [id])
+  label              String?
+  chest              Decimal?          @db.Decimal(5, 1)
+  waist              Decimal?          @db.Decimal(5, 1)
+  hips               Decimal?          @db.Decimal(5, 1)
+  shoulder           Decimal?          @db.Decimal(5, 1)
+  sleeveLength       Decimal?          @db.Decimal(5, 1)
+  inseam             Decimal?          @db.Decimal(5, 1)
+  outseam            Decimal?          @db.Decimal(5, 1)
+  neckCircumference  Decimal?          @db.Decimal(5, 1)
+  backLength         Decimal?          @db.Decimal(5, 1)
+  frontLength        Decimal?          @db.Decimal(5, 1)
+  thigh              Decimal?          @db.Decimal(5, 1)
+  knee               Decimal?          @db.Decimal(5, 1)
+  ankle              Decimal?          @db.Decimal(5, 1)
+  height             Decimal?          @db.Decimal(5, 1)
+  unit               String            @default("cm")
+  notes              String?           @db.Text
+  isDefault          Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@map("measurements")
+}
+
+model Quotation {
+  id                 String            @id @default(cuid())
+  tailoringRequestId String
+  tailoringRequest   TailoringRequest  @relation(fields: [tailoringRequestId], references: [id])
+  quotationNumber    String            @unique
+  items              Json
+  subtotal           Decimal           @db.Decimal(10, 2)
+  discount           Decimal           @db.Decimal(10, 2) @default(0)
+  total              Decimal           @db.Decimal(10, 2)
+  validUntil         DateTime?
+  status             QuotationStatus   @default(DRAFT)
+  notes              String?           @db.Text
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@map("quotations")
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model ProductionTracking {
+  id                 String            @id @default(cuid())
+  tailoringRequestId String
+  tailoringRequest   TailoringRequest  @relation(fields: [tailoringRequestId], references: [id])
+  status             TailoringStatus
+  notes              String?           @db.Text
+  completedAt        DateTime?
+  createdAt          DateTime          @default(now())
+
+  @@map("production_tracking")
+}
+
+// ============================================================
+// COUPONS & PROMOTIONS
+// ============================================================
+
+model Coupon {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  description   String?
+  type          CouponType
+  value         Decimal      @db.Decimal(10, 2)
+  minOrderValue Decimal?     @db.Decimal(10, 2)
+  maxUses       Int?
+  usedCount     Int          @default(0)
+  isActive      Boolean      @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("coupons")
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  TAILORING_UPDATE
+  QUOTATION
+  PROMOTION
+  SYSTEM
+}
+
+// ============================================================
+// REFERRALS
+// ============================================================
+
+model Referral {
+  id         String   @id @default(cuid())
+  makerId    String
+  maker      User     @relation("ReferralMaker", fields: [makerId], references: [id])
+  receiverId String   @unique
+  receiver   User     @relation("ReferralReceiver", fields: [receiverId], references: [id])
+  code       String   @unique
+  usedAt     DateTime?
+  reward     Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  @@map("referrals")
+}

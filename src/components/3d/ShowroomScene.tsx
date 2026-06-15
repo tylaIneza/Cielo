@@ -47,8 +47,8 @@ function ClothingRack({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       {/* Horizontal bar */}
-      <mesh castShadow>
-        <cylinderGeometry args={[0.03, 0.03, 2.5, 8]} rotation={[0, 0, Math.PI / 2]} />
+      <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2.5, 8]} />
         <meshStandardMaterial color="#c9a84c" metalness={0.9} roughness={0.1} />
       </mesh>
       {/* Left support */}

@@ -172,7 +172,7 @@ export default function AdminDashboard() {
                     contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 4 }}
                     labelStyle={{ color: "#c9a84c", fontSize: 12 }}
                     itemStyle={{ color: "#f5f0e8", fontSize: 12 }}
-                    formatter={(v: number) => formatPrice(v)}
+                    formatter={(v: unknown) => formatPrice(typeof v === "number" ? v : 0)}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#c9a84c" strokeWidth={2} fill="url(#revenueGrad)" />
                 </AreaChart>

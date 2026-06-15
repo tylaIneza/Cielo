@@ -115,8 +115,8 @@ export function Product360Viewer({ color = "#1a6b3c", className = "" }: Product3
             rotation={[0, 0, 0]}
             polar={[-Math.PI / 4, Math.PI / 4]}
             azimuth={[-Math.PI, Math.PI]}
-            config={{ mass: 2, tension: 400 }}
-            snap={{ mass: 4, tension: 400 }}
+            damping={0.2}
+            snap
           >
             <GarmentModel color={color} />
           </PresentationControls>

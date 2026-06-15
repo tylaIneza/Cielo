@@ -2,17 +2,34 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube,
-  Mail,
-  Phone,
-  MapPin,
-  ArrowRight,
-} from "lucide-react";
+import { Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { SITE_CONFIG } from "@/constants";
+
+function IconInstagram({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconFacebook({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
+
+function IconTwitterX({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 const footerLinks = {
   Collections: [
@@ -163,10 +180,10 @@ export function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-4">
             {[
-              { icon: Instagram, href: SITE_CONFIG.social.instagram, label: "Instagram" },
-              { icon: Facebook, href: SITE_CONFIG.social.facebook, label: "Facebook" },
-              { icon: Twitter, href: SITE_CONFIG.social.twitter, label: "Twitter" },
-            ].map(({ icon: Icon, href, label }) => (
+              { Icon: IconInstagram, href: SITE_CONFIG.social.instagram, label: "Instagram" },
+              { Icon: IconFacebook, href: SITE_CONFIG.social.facebook, label: "Facebook" },
+              { Icon: IconTwitterX, href: SITE_CONFIG.social.twitter, label: "Twitter / X" },
+            ].map(({ Icon, href, label }) => (
               <motion.a
                 key={label}
                 href={href}

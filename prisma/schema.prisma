@@ -1,0 +1,431 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  TAILOR
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  TAILORING
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_PAID
+}
+
+enum TailoringStatus {
+  INQUIRY
+  QUOTED
+  APPROVED
+  IN_PROGRESS
+  FITTING
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductCategory {
+  WOMEN
+  MEN
+  KIDS
+  AFRICAN_PRINT
+  FABRICS
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  TAILORING_UPDATE
+  PAYMENT
+  PROMOTION
+  SYSTEM
+}
+
+// ─── Users & Auth ──────────────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  fullName      String
+  email         String     @unique
+  phoneNumber   String?    @unique
+  passwordHash  String
+  role          Role       @default(CUSTOMER)
+  avatar        String?
+  status        UserStatus @default(PENDING_VERIFICATION)
+  emailVerified DateTime?
+  phoneVerified Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  orders            Order[]
+  tailoringRequests TailoringRequest[]
+  reviews           Review[]
+  wishlist          WishlistItem[]
+  addresses         Address[]
+  measurements      Measurement[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+  sessions          Session[]
+  accounts          Account[]
+  passwordResets    PasswordReset[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// ─── Products ──────────────────────────────────────────────────────────────
+
+model Product {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  description String          @db.Text
+  category    ProductCategory
+  gender      String?
+  price       Float
+  salePrice   Float?
+  stock       Int             @default(0)
+  featured    Boolean         @default(false)
+  images      String[]
+  sizes       String[]
+  colors      String[]
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  orderItems  OrderItem[]
+  reviews     Review[]
+  wishlist    WishlistItem[]
+  collections CollectionProduct[]
+
+  @@map("products")
+}
+
+// ─── Orders ────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  customerId      String
+  totalAmount     Float
+  paymentStatus   PaymentStatus @default(PENDING)
+  orderStatus     OrderStatus   @default(PENDING)
+  shippingAddress Json
+  notes           String?       @db.Text
+  paymentMethod   String?
+  paymentRef      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer User        @relation(fields: [customerId], references: [id])
+  items    OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  size      String?
+  color     String?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// ─── Tailoring ─────────────────────────────────────────────────────────────
+
+model TailoringRequest {
+  id                String          @id @default(cuid())
+  customerId        String
+  garmentType       String
+  measurements      Json
+  inspirationImages String[]
+  fabricType        String
+  notes             String?         @db.Text
+  quotedPrice       Float?
+  status            TailoringStatus @default(INQUIRY)
+  tailorId          String?
+  finalPhotos       String[]
+  progressNotes     String?         @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  customer User @relation(fields: [customerId], references: [id])
+
+  @@map("tailoring_requests")
+}
+
+// ─── Reviews ───────────────────────────────────────────────────────────────
+
+model Review {
+  id         String   @id @default(cuid())
+  customerId String
+  productId  String
+  rating     Int
+  comment    String?  @db.Text
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  customer User    @relation(fields: [customerId], references: [id])
+  product  Product @relation(fields: [productId], references: [id])
+
+  @@map("reviews")
+}
+
+// ─── Wishlist ──────────────────────────────────────────────────────────────
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+// ─── Measurements ──────────────────────────────────────────────────────────
+
+model Measurement {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   @default("Default")
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("measurements")
+}
+
+// ─── Addresses ─────────────────────────────────────────────────────────────
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  label       String   @default("Home")
+  fullName    String
+  phoneNumber String
+  street      String
+  city        String
+  district    String?
+  country     String   @default("Rwanda")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ─── CMS / Site Content ────────────────────────────────────────────────────
+
+model SiteSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model HeroSlide {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?
+  image       String
+  link        String?
+  buttonText  String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("hero_slides")
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  image     String
+  link      String?
+  position  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("banners")
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  products CollectionProduct[]
+
+  @@map("collections")
+}
+
+model CollectionProduct {
+  collectionId String
+  productId    String
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@map("collection_products")
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  avatar    String?
+  content   String   @db.Text
+  rating    Int      @default(5)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+
+  @@map("newsletter_subscribers")
+}
+
+// ─── Activity Logs ─────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String?
+  entityId    String?
+  description String?  @db.Text
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
